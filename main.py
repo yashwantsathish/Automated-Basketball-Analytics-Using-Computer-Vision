@@ -93,8 +93,27 @@ PAINT_X_MAX = 600
 PAINT_Y_MIN = 630
 PAINT_Y_MAX = 880
 
+paint_touch_attempts = 0
+paint_touch_makes = 0
+
 cap = cv2.VideoCapture(get_input_video())
-out, frame_height = get_output_video(cap)
+
+# Read and rotate first frame to determine correct dimensions
+success, img = cap.read()
+if not success:
+    raise Exception("Could not read the first frame from video")
+
+img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+first_frame = img  # store for use in first iteration
+
+frame_height, frame_width = img.shape[:2]
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+# Initialize VideoWriter with rotated dimensions
+output_path = get_available_filename('output_vids', 'output', 'mp4')
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+
 model = YOLO("model.pt")
 
 classes = ["ball", "made", "person", "rim", "shoot"]
@@ -103,6 +122,11 @@ total_attempts = 0
 total_made = 0
 
 frame = 0
+
+paint_touch_detected = False
+paint_touch_frame = -1
+paint_sequences = []
+
 
 # format = [x_center, y_center, frame]
 ball_pos = deque(maxlen=30)
@@ -131,13 +155,14 @@ total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 fps = cap.get(cv2.CAP_PROP_FPS)
 
 while True:
-    success, img = cap.read()
-    
-    if not success:
-        break
-
     if frame == 0:
+        img = first_frame  # Already read and rotated
         print(f"Resolution: {img.shape[1]}x{img.shape[0]}")
+    else:
+        success, img = cap.read()
+        if not success:
+            break
+        img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     results = model(img, stream=True)
 
@@ -230,6 +255,8 @@ while True:
             write_text(img, "Paint Touch", (x1, y2 + 20), 
                     cv2.FONT_HERSHEY_PLAIN, 1.2, (255, 255, 255), (0, 0, 255), 2)
             print(f"Paint touch detected at court coords: ({court_x:.2f}, {court_y:.2f})")
+            paint_touch_frame = frame
+            paint_touch_detected = True
 
         cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 0), 3)  # Blue bounding box
         write_text(img, "Ballhandler", (x1, y1 - 15), cv2.FONT_HERSHEY_PLAIN, 1.5, (255, 255, 255), (0, 0, 0), 2)
@@ -245,14 +272,29 @@ while True:
                    (255, 255, 255), (0, 0, 0), 2)
 
     if above_rim_pos and rim_pos and ball_pos and ball_below_rim(ball_pos[-1], rim_pos[-1]):
-        if shot_made(above_rim_pos, ball_pos[-1], rim_pos[-1]):
+        made = shot_made(above_rim_pos, ball_pos[-1], rim_pos[-1])
+
+        if paint_touch_detected and frame - paint_touch_frame < 100:
+            paint_touch_attempts += 1
+            if made:
+                paint_touch_makes += 1
+                paint_sequences.append({"frame": paint_touch_frame, "result": "make"})
+                print("Paint Touch → Shot Made")
+            else:
+                paint_sequences.append({"frame": paint_touch_frame, "result": "miss"})
+                print("Paint Touch → Shot Missed")
+            paint_touch_detected = False
+
+        if made:
             total_made += 1
-            popup_text = "Made!"
+            #popup_text = "Made!"
         else:
-            popup_text = "Missed!"
+            #popup_text = "Missed!"
+
         total_attempts += 1
         above_rim_pos = None
         popup_timer = 30
+
 
         # # Reset for the next shot
         # release_calculated = False
@@ -285,6 +327,15 @@ while True:
     
     write_text(img, shots_text, (50, int(150 * scaling_factor)), 
                cv2.FONT_HERSHEY_PLAIN, font_scale, (255, 255, 255), (0, 0, 0), thickness)
+
+    if paint_touch_attempts > 0:
+        paint_pct = (paint_touch_makes / paint_touch_attempts) * 100
+        paint_text = f'Paint Touch Shots: {paint_touch_makes}/{paint_touch_attempts} ({paint_pct:.1f}%)'
+    else:
+        paint_text = 'Paint Touch Shots: 0/0'
+
+    write_text(img, paint_text, (50, int(200 * scaling_factor)), 
+            cv2.FONT_HERSHEY_PLAIN, font_scale, (255, 255, 255), (0, 0, 0), thickness)
 
     if popup_timer > 0 and popup_text:
         text_location = (int(img.shape[1] / 2) - 100, int(img.shape[0] / 2))
