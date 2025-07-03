@@ -67,9 +67,12 @@ Displays:
 
 ## 📎 Example Output
 
-> ![Shot angle and paint detection](example_frame.jpg)  
-> *Green arrow indicates release angle, with in-paint detection labeled.*
+> ![Shot Angle Detection](output_vids/ShotAngleDetectionEx.png)  
+> *Green arrow indicates release angle*
 
+> ![Paint Touch Detection](output_vids/PaintTouchDetectedEx.png)
+
+> *Labeled paint touch when player steps into painted area, shots distinguished after paint touch*
 ---
 
 ## 📂 File Highlights
