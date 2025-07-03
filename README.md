@@ -1,9 +1,6 @@
 # 🏀 Automated Basketball Analytics for Cal Poly MBB
 
-> Final Senior Project – CSC 492  
-> Cal Poly, San Luis Obispo  
 > By Yashwant Sathish Kumar  
-> Advisor: Dr. Jonathan Ventura
 
 ---
 
