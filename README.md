@@ -77,11 +77,11 @@ Displays:
 
 ## 📂 File Highlights
 
-- `main.py` – Core program for tracking, detection, and visualization.
-- `homography_matrix.txt` – Matrix for mapping pixel coordinates to real-world court space.
-- `model.pt` – YOLOv8 trained weights via Roboflow (not included in repo).
-- `input_vids/` – Folder for practice/game footage.
-- `output_vids/` – Generated videos with overlayed analytics.
+- `main.py`: Core program for tracking, detection, and visualization.
+- `homography_matrix.txt`: Matrix for mapping pixel coordinates to real-world court space.
+- `model.pt`: YOLOv8 trained weights via Roboflow (not included in repo).
+- `input_vids/`: Folder for practice/game footage.
+- `output_vids/`: Generated videos with overlayed analytics.
 
 ---
 
